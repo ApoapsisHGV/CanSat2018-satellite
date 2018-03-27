@@ -36,7 +36,7 @@ const int irLedPower = 2;
 RFM69 radio;
 
 //SD card
-const int sdPin = 4;
+const int sdPin = 5;
 
 //gps
 TinyGPS gps;
