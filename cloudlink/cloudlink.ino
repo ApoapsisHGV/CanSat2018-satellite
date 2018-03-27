@@ -2,6 +2,8 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+#include <SoftwareSerial.h> 
+#include <TinyGPS.h> 
 
 //sensor init
 //pressure and temp
@@ -18,7 +20,7 @@ int irLedPower = 2;
 #ifdef DEBUG
  #define VPRINT(data) Serial.print(data);
  #define VPRINTLN(data) Serial.println(data);
-#endif
+#endif 
 
 #ifndef DEBUG
  #define VPRINT(data)
@@ -36,6 +38,10 @@ RFM69 radio;
 
 //SD card
 const int sdPin = 4;
+
+//gps
+TinyGPS gps;
+SoftwareSerial gpsSerial(3,4);
 
 void setup(){
   Serial.begin(9600);
@@ -60,16 +66,22 @@ void setup(){
   }
   VPRINTLN("success");
 
-  
+  //gps init
+  gpsSerial.begin(9600);
+
+  //radio init
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
-  radio.setHighPower(); //To use the high power capabilities of the RFM69HW
+  radio.setHighPower();
   radio.encrypt(ENCRYPTKEY);
 }
 
 void loop(){
+  //temparature and pressure
   double pressure, temparature, dustDensity;
+  float lon, lat;
   bmp.getData(temparature, pressure);
-  
+
+  //dust
   digitalWrite(irLedPower, LOW);
   delayMicroseconds(200);
   dustDensity = analogRead(dustMeasurePin);
@@ -78,7 +90,12 @@ void loop(){
   dustDensity = dustDensity * (5.0 / 1024.0);
   dustDensity = 0.17 * dustDensity - 0.1;
 
-  sprintf(payload, "T:%d,P:%d,D:%d", (int)temparature,(int)pressure,dustDensity);
+  //gps
+  if(gpsSerial.available()){
+    gps.f_get_position(&lat, &lon);
+  }
+
+  sprintf(payload, "T:%d,P:%d,D:%d,LA;%d,LO:%d", (int)temparature,(int)pressure,dustDensity,lat,lon);
 
   VPRINTLN("Writing to logfile");
   File logFile = SD.open("cloudlink_log.txt", FILE_WRITE);
