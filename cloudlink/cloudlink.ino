@@ -1,7 +1,7 @@
 #include <qbcan.h>
 #include <Wire.h>
 #include <SPI.h>
-
+#include <SD.h>
 
 //sensor init
 //pressure and temp
@@ -34,32 +34,41 @@ int irLedPower = 2;
 char payload[50];
 RFM69 radio;
 
+//SD card
+const int sdPin = 4;
+
 void setup(){
   Serial.begin(9600);
+
+  //BMP init
   VPRINTLN("REBOOT");
-  if(bmp.begin()){
-    VPRINTLN("BMP180 init success");  
-  }
-  else{
-    VPRINTLN("BMP180 init fail (disconnected?)\n\n");
+  VPRINTLN("Starting BMP180 init");
+  if(!bmp.begin()){
+    VPRINTLN("failed");
     while(1);
   }
+  VPRINTLN("success");  
+
+  //Dust init
   pinMode(irLedPower,OUTPUT);
-  /*radio.initialize(FREQUENCY,NODEID,NETWORKID);
+
+  //SD init
+  VPRINTLN("Starting SD init");
+  if(!SD.begin(sdPin)){
+    VPRINTLN("failed");
+    while(1);  
+  }
+  VPRINTLN("success");
+
+  
+  radio.initialize(FREQUENCY,NODEID,NETWORKID);
   radio.setHighPower(); //To use the high power capabilities of the RFM69HW
   radio.encrypt(ENCRYPTKEY);
-  Serial.println("Transmitting at 433 Mhz");*/  
 }
 
 void loop(){
   double pressure, temparature, dustDensity;
   bmp.getData(temparature, pressure);
-  VPRINT("Absolute pressure: ");
-  VPRINT(pressure);
-  VPRINTLN(" mb.");
-  VPRINT("Temperature: ");
-  VPRINT(temparature);
-  VPRINTLN(" deg C.");
   
   digitalWrite(irLedPower, LOW);
   delayMicroseconds(200);
@@ -68,15 +77,21 @@ void loop(){
   digitalWrite(irLedPower,HIGH);
   dustDensity = dustDensity * (5.0 / 1024.0);
   dustDensity = 0.17 * dustDensity - 0.1;
-  VPRINT("Dust density: ");
-  VPRINTLN(dustDensity);
-  
-  
-  /*
-  sprintf(payload,"T: %d C, P: %d mb.",(int)T,(int)P);
-  Serial.println(payload);
+
+  sprintf(payload, "T:%d,P:%d,D:%d", (int)temparature,(int)pressure,dustDensity);
+
+  VPRINTLN("Writing to logfile");
+  File logFile = SD.open("cloudlink_log.txt", FILE_WRITE);
+  if (logFile){
+    logFile.write(payload);  
+  }
+  else{
+    VPRINTLN("failed");
+  }
+  VPRINTLN("success");
+
+  VPRINTLN("sending data");
   radio.send(GATEWAYID, payload, 50);
-  Serial.println("Send complete");
-  */
+  VPRINTLN("success");
   delay(100);
 }
