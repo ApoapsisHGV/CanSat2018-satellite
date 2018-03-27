@@ -10,8 +10,8 @@
 BMP180 bmp;
 
 //dust sensor
-int dustMeasurePin = 0;
-int irLedPower = 2;
+const int dustMeasurePin = 0;
+const int irLedPower = 2;
 
 
 //debug printing
@@ -33,7 +33,6 @@ int irLedPower = 2;
 #define NETWORKID 192
 #define GATEWAYID 1
 #define ENCRYPTKEY "Ap0ap515_HGV2018"
-char payload[50];
 RFM69 radio;
 
 //SD card
@@ -79,6 +78,7 @@ void loop(){
   //temparature and pressure
   double pressure, temparature, dustDensity;
   float lon, lat;
+  char payload[50];
   bmp.getData(temparature, pressure);
 
   //dust
@@ -95,7 +95,7 @@ void loop(){
     gps.f_get_position(&lat, &lon);
   }
 
-  sprintf(payload, "T:%d,P:%d,D:%d,LA;%d,LO:%d", (int)temparature,(int)pressure,dustDensity,lat,lon);
+  sprintf(payload, "T:%d,P:%d,D:%d,LA;%d,LO:%d", (int)temparature, (int)pressure, dustDensity, lat, lon);
 
   VPRINTLN("Writing to logfile");
   File logFile = SD.open("cloudlink_log.txt", FILE_WRITE);
