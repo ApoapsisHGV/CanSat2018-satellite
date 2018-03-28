@@ -7,6 +7,10 @@
 //sensor init
 //pressure and temp
 BMP180 bmp;
+double pressure;
+
+//piezo
+const int piezo = 9;
 
 //dust sensor
 const int dustMeasurePin = 0;
@@ -52,24 +56,38 @@ void setup(){
   VPRINTLN("success");  
 
   //Dust init
+  VPRINTLN("Startin dust sensor init");
   pinMode(irLedPower,OUTPUT);
+  VPRINTLN("success");
 
   //gps init
+  VPRINTLN("Starting GPS init");
   gpsSerial.begin(9600);
+  VPRINTLN("success");
 
   //radio init
+  VPRINTLN("Starting radio init");
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
   radio.setHighPower();
   radio.encrypt(ENCRYPTKEY);
+  VPRINTLN("success");
+
+  //piezo init
+  VPRINTLN("Starting piezo init");
+  pinMode(piezo,OUTPUT);
+  VPRINTLN("success");
 }
 
 void loop(){
   //temparature and pressure
-  double pressure, temparature, dustDensity;
+  double newPressure, temparature, dustDensity;
   float lon, lat;
   char payload[50];
-  bmp.getData(temparature, pressure);
-
+  bmp.getData(temparature, newPressure);
+  if(newPressure < pressure){
+    digitalWrite(piezo, HIGH);
+  }
+  
   //dust
   digitalWrite(irLedPower, LOW);
   delayMicroseconds(200);
