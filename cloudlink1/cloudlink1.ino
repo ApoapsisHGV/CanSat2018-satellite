@@ -1,7 +1,6 @@
 #include <qbcan.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <SD.h>
 #include <SoftwareSerial.h> 
 #include <TinyGPS.h> 
 
@@ -35,8 +34,6 @@ const int irLedPower = 2;
 #define ENCRYPTKEY "Ap0ap515_HGV2018"
 RFM69 radio;
 
-//SD card
-const int sdPin = 5;
 
 //gps
 TinyGPS gps;
@@ -56,14 +53,6 @@ void setup(){
 
   //Dust init
   pinMode(irLedPower,OUTPUT);
-
-  //SD init
-  VPRINTLN("Starting SD init");
-  if(!SD.begin(sdPin)){
-    VPRINTLN("failed");
-    while(1);  
-  }
-  VPRINTLN("success");
 
   //gps init
   gpsSerial.begin(9600);
@@ -97,15 +86,8 @@ void loop(){
 
   sprintf(payload, "T:%d,P:%d,D:%d,LA;%d,LO:%d", (int)temparature, (int)pressure, dustDensity, lat, lon);
 
-  VPRINTLN("Writing to logfile");
-  File logFile = SD.open("cloudlink_log.txt", FILE_WRITE);
-  if (logFile){
-    logFile.write(payload);  
-  }
-  else{
-    VPRINTLN("failed");
-  }
-  VPRINTLN("success");
+  //send to Partner
+  Serial.println(payload);
 
   VPRINTLN("sending data");
   radio.send(GATEWAYID, payload, 50);
