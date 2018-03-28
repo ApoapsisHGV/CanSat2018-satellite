@@ -43,6 +43,7 @@ RFM69 radio;
 TinyGPS gps;
 SoftwareSerial gpsSerial(3,4);
 
+
 void setup(){
   Serial.begin(9600);
 
@@ -76,6 +77,7 @@ void setup(){
   VPRINTLN("Starting piezo init");
   pinMode(piezo,OUTPUT);
   VPRINTLN("success");
+
 }
 
 void loop(){
