@@ -3,7 +3,7 @@ with open("cloudlink.ino") as main:
 
 debug = input("Enable debuggin?(y/n): ").lower()
 if debug == "n":
-    main[main.index("#define DEBUG\n")] = "//#define DEBUG"
+    main[main.index("#define DEBUG 1\n")] = "#define DEBUG 0"
 
 main = "".join(main)
 with open("cloudlink_out.ino", "w") as out:
