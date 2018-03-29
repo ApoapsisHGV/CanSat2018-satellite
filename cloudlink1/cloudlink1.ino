@@ -19,6 +19,7 @@ BMP180 bmp(GROUND);
 //dust sensor
 const int dustMeasurePin = 0;
 const int irLedPower = 2;
+Dust dust(irLedPower, dustMeasurePin);
 
 
 //debug printing
@@ -54,15 +55,15 @@ void setup() {
   //BMP init
   VPRINTLN("REBOOT");
   VPRINTLN("Starting BMP180 init");
-  if (!bmp.init()) {
+  if (!bmp.begin()) {
     VPRINTLN("failed");
     while (1);
   }
+  bmp.calibrate();
   VPRINTLN("success");
 
   //Dust init
   VPRINTLN("Startin dust sensor init");
-  pinMode(irLedPower, OUTPUT);
   VPRINTLN("success");
 
   //piezo init
@@ -130,24 +131,18 @@ void loop() {
   double temperature, pressure, dustDensity;
   float lon, lat, velocity, newHeight ;
   int hour, minute, second, milisecond;
-  char payload[100];
   
   //bmp
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
+  newHeight = bmp.getHeight(pressure);
   if (height - newHeight > 10) {
     digitalWrite(PIEZO, HIGH);
   }
   height = newHeight;
   //dust
-  digitalWrite(irLedPower, LOW);
-  delayMicroseconds(200);
-  dustDensity = analogRead(dustMeasurePin);
-  delayMicroseconds(40);
-  digitalWrite(irLedPower, HIGH);
-  dustDensity = dustDensity * (5.0 / 1024.0);
-  dustDensity = 0.17 * dustDensity - 0.1;
-
+  dustDensity = dust.getDensity();
+  
   //gps
   if (GPS.newNMEAreceived()) {
     if (!GPS.parse(GPS.lastNMEA()))
@@ -163,9 +158,11 @@ void loop() {
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
   String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+timestamp+",H:"+(String)height;
+  char payload[pload.length()];
+  pload.toCharArray(payload, pload.length());
   
   //send to Partner
-  Serial.println(pload);
+  Serial.println(payload);
 
   //send with radio
   /*
