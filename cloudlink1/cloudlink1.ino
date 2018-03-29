@@ -163,8 +163,7 @@ void loop() {
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
   String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+timestamp+",H:"+(String)height;
-  //sprintf(payload, "T:%f,P:%d,D:%d,LA;%d,LO:%d,H:%d,M:%d,S:%d,MI:%d,HE:%d", temperature, (int)pressure, dustDensity, lat, lon, velocity, hour, minute, second, milisecond, height);
-
+  
   //send to Partner
   Serial.println(pload);
 
