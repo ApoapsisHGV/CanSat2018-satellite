@@ -25,7 +25,7 @@ Dust dust(irLedPower, dustMeasurePin);
 //debug printing
 #define DEBUG 1
 
-#ifdef DEBUG
+#if DEBUG
 #define VPRINT(data) Serial.print(data);
 #define VPRINTLN(data) Serial.println(data);
 #else
