@@ -8,8 +8,14 @@ BMP180::BMP180(int height){
     _height = height;
 }
 
-int BMP180::init(){
+int BMP180::begin(){
   return _sensor.begin();  
+}
+
+void BMP180::calibrate(){
+  double T;
+  getTemperature(T);
+  getPressure(_baselinePressure, T);
 }
 
 void BMP180::getTemperature(double &T){
@@ -23,5 +29,5 @@ void BMP180::getPressure(double &P, double &T){
 }
 
 double BMP180::getHeight(double &P){
-  return _sensor.altitude(P,_sensor.sealevel(_height, P));
+  return(44330.0*(1-pow(P/_baselinePressure,1/5.255)));
 }

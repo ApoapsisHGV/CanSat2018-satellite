@@ -10,9 +10,11 @@ class BMP180{
         void getTemperature(double &T);
         void getPressure(double &P, double &T);
         double getHeight(double &P);
-        int init();
+        int begin();
+        void calibrate();
     private:
         int _height;
+        double _baselinePressure;
         SFE_BMP180 _sensor;
 };
 
