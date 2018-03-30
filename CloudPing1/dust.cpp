@@ -14,7 +14,7 @@ Dust::Dust(int iled, int vout){
 }
 
 //Filter Funcion. This was taken from the Waveshare Wiki. More Info here: https://www.waveshare.com/wiki/Dust_Sensor
-int Dust::Filter(int m) {
+int Dust::filter(int m) {
   static int flag_first = 0, _buff[10], sum;
   const int _buff_max = 10;
   int i;
@@ -49,7 +49,7 @@ double Dust::getDensity(){
   int adcvalue = analogRead(_vout);
   digitalWrite(_iled, LOW);
   
-  adcvalue = Filter(adcvalue);
+  adcvalue = filter(adcvalue);
   
   double voltage = (SYS_VOLTAGE / 1023.0) * adcvalue * 11; //Calculating the voltage at the analog pin
   
