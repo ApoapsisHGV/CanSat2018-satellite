@@ -22,7 +22,7 @@ int Radio::begin(double FREQ, int RST, uint8_t key){
   if(!ret){
     return ret;
   }
-  _radio.setTxPower(20, true);
+  _radio.setTxPower(20);
   _radio.setEncryptionKey(key);
   return 0;
 }
