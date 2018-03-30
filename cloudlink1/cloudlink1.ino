@@ -2,7 +2,6 @@
 #include <SPI.h>
 #include <SoftwareSerial.h>
 #include <Adafruit_GPS.h>
-#include <RH_RF69.h>
 #include "BMP.h"
 #include "dust.h"
 #include "rfm.h"
@@ -19,12 +18,13 @@ BMP180 bmp(GROUND);
 //dust sensor
 const int dustMeasurePin = 0;
 const int irLedPower = 2;
+Dust dust(irLedPower, dustMeasurePin);
 
 
 //debug printing
 #define DEBUG 1
 
-#ifdef DEBUG
+#if DEBUG
 #define VPRINT(data) Serial.print(data);
 #define VPRINTLN(data) Serial.println(data);
 #else
@@ -38,13 +38,13 @@ Adafruit_GPS GPS(&gpsSerial);
 boolean usingInterrupt = true;
 
 //radio
-/*
-  #define RF69_FREQ 433.0
-  #define RFM69_RST 9
-  #define RFM69_CS 10
-  #define RFM69_INT 5
-  RH_RF69 rf69(RFM69_CS, RFM69_INT);
-*/
+#define RF69_FREQ 433.0
+#define RFM69_RST 9
+#define RFM69_CS 10
+#define RFM69_INT 5
+Radio rfm69(RFM69_CS, RFM69_INT);
+  
+
 void setup() {
   if (!DEBUG) {
     SoftwareSerial Serial(7, 6);
@@ -54,15 +54,15 @@ void setup() {
   //BMP init
   VPRINTLN("REBOOT");
   VPRINTLN("Starting BMP180 init");
-  if (!bmp.init()) {
+  if (!bmp.begin()) {
     VPRINTLN("failed");
     while (1);
   }
+  bmp.calibrate();
   VPRINTLN("success");
 
   //Dust init
   VPRINTLN("Startin dust sensor init");
-  pinMode(irLedPower, OUTPUT);
   VPRINTLN("success");
 
   //piezo init
@@ -80,27 +80,13 @@ void setup() {
   VPRINTLN("success");
 
   //radio init
-  /*
-    VPRINTLN("Starting radio init")
-    pinMode(RFM69_RST, OUTPUT);
-    digitalWrite(RFM69_RST, LOW);
-    digitalWrite(RFM69_RST, HIGH);
-    delay(10);
-    digitalWrite(RFM69_RST, LOW);
-    delay(10);
-    if (!rf69.init()) {
-    VPRINTLN("failed");
-    while (1);
-    }
-    if (!rf69.setFrequency(RF69_FREQ)) {
-    VPRINTLN("failed");
-    while (1);
-    }
-    rf69.setTxPower(20, true);
+    VPRINTLN("Starting radio init");
     uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
                     0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
-    rf69.setEncryptionKey(key);
-  */
+    if(!rfm69.begin(RF69_FREQ, RFM69_RST, key)){
+      VPRINTLN("failed");
+      while (1);
+    }
 }
 
 //code from adafruit for gps
@@ -130,24 +116,18 @@ void loop() {
   double temperature, pressure, dustDensity;
   float lon, lat, velocity, newHeight ;
   int hour, minute, second, milisecond;
-  char payload[100];
   
   //bmp
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
+  newHeight = bmp.getHeight(pressure);
   if (height - newHeight > 10) {
     digitalWrite(PIEZO, HIGH);
   }
   height = newHeight;
   //dust
-  digitalWrite(irLedPower, LOW);
-  delayMicroseconds(200);
-  dustDensity = analogRead(dustMeasurePin);
-  delayMicroseconds(40);
-  digitalWrite(irLedPower, HIGH);
-  dustDensity = dustDensity * (5.0 / 1024.0);
-  dustDensity = 0.17 * dustDensity - 0.1;
-
+  dustDensity = dust.getDensity();
+  
   //gps
   if (GPS.newNMEAreceived()) {
     if (!GPS.parse(GPS.lastNMEA()))
@@ -163,20 +143,14 @@ void loop() {
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
   String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+timestamp+",H:"+(String)height;
+  char payload[pload.length()];
+  pload.toCharArray(payload, pload.length());
   
   //send to Partner
-  Serial.println(pload);
+  Serial.println(payload);
 
   //send with radio
-  /*
-    int sum = 0;
-    for(int c = 0; c < sizeof(payload); c++){
-     sum += payload[c];
-    }
-    sprintf(payload, "%d,CHKS:%d", payload, sum);
-    rf69.send((uint8_t *)payload, strlen(payload));
-    rf69.waitPacketSent();//udp style, dont wait for response
-  */
+  rfm69.sendData(payload);
 
   delay(1000);
 }
