@@ -1,3 +1,4 @@
+//Loading libraries
 #include <Wire.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
@@ -7,8 +8,9 @@
 #include "rfm.h"
 
 //sensor init
+
 //pressure and temp
-#define GROUND 500
+#define GROUND 500 //Defining the initial hight above sea level
 double height;
 BMP180 bmp(GROUND);
 
@@ -46,6 +48,8 @@ Radio rfm69(RFM69_CS, RFM69_INT);
   
 
 void setup() {
+  
+  //Clearing the Serial Output
   if (!DEBUG) {
     SoftwareSerial Serial(7, 6);
   }
@@ -73,23 +77,25 @@ void setup() {
   //gps init
   VPRINTLN("Starting gps init");
   GPS.begin(9600);
-  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA); 
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
   useInterrupt(true);
   VPRINTLN("success");
 
   //radio init
-    VPRINTLN("Starting radio init");
-    uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
+  VPRINTLN("Starting radio init");
+  //Defining the encryption key
+  uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
                     0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
-    if(!rfm69.begin(RF69_FREQ, RFM69_RST, key)){
-      VPRINTLN("failed");
-      while (1);
-    }
+  if(!rfm69.begin(RF69_FREQ, RFM69_RST, key)){
+    VPRINTLN("failed");
+    while (1);
+  }
 }
 
 //code from adafruit for gps
+//This function calls for interrupt once every millisecond and stores new GPS data
 SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
 }
@@ -121,10 +127,13 @@ void loop() {
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
   newHeight = bmp.getHeight(pressure);
+  //Activating the Piezo once the capsule is going back down
   if (height - newHeight > 10) {
-    digitalWrite(PIEZO, HIGH);
+    digitalWrite(PIEZO, HIGH); 
   }
   height = newHeight;
+  
+  
   //dust
   dustDensity = dust.getDensity();
   
@@ -133,6 +142,8 @@ void loop() {
     if (!GPS.parse(GPS.lastNMEA()))
       return;
   }
+  
+  //time
   if (timer > millis())  timer = millis();
   lat = GPS.latitudeDegrees;
   lon = GPS.longitudeDegrees;
@@ -141,7 +152,10 @@ void loop() {
   minute = GPS.minute;
   second = GPS.seconds;
   milisecond = GPS.milliseconds;
+  
+  //Creating Timestamp
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
+  //Creating the data package
   String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+timestamp+",H:"+(String)height;
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
@@ -152,5 +166,5 @@ void loop() {
   //send with radio
   rfm69.sendData(payload);
 
-  delay(1000);
+  delay(100);
 }
