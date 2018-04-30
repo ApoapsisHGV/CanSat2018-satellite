@@ -38,11 +38,9 @@ Adafruit_GPS GPS(&gpsSerial);
 boolean usingInterrupt = true;
 
 //radio
-#define RF69_FREQ 433.0
-#define RFM69_RST 9
-#define RFM69_CS 10
-#define RFM69_INT 5
-Radio rfm69(RFM69_CS, RFM69_INT);
+uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
+                    0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
+Radio rfm69(key, 1, 1, 2);
   
 
 void setup() {
@@ -79,14 +77,6 @@ void setup() {
   useInterrupt(true);
   VPRINTLN("success");
 
-  //radio init
-    VPRINTLN("Starting radio init");
-    uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
-                    0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
-    if(!rfm69.begin(RF69_FREQ, RFM69_RST, key)){
-      VPRINTLN("failed");
-      while (1);
-    }
 }
 
 //code from adafruit for gps
