@@ -39,7 +39,7 @@ boolean usingInterrupt = true;
 
 //radio
 uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
-                    0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
+                  0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
 Radio rfm69(key, 1, 1, 2);
   
 
@@ -79,6 +79,8 @@ void setup() {
 
 }
 
+// taken from https://github.com/adafruit/Adafruit_GPS
+
 //code from adafruit for gps
 SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
@@ -111,9 +113,11 @@ void loop() {
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
   newHeight = bmp.getHeight(pressure);
+  
   if (height - newHeight > 10) {
     digitalWrite(PIEZO, HIGH);
   }
+  
   height = newHeight;
   //dust
   dustDensity = dust.getDensity();
@@ -123,6 +127,7 @@ void loop() {
     if (!GPS.parse(GPS.lastNMEA()))
       return;
   }
+  
   if (timer > millis())  timer = millis();
   lat = GPS.latitudeDegrees;
   lon = GPS.longitudeDegrees;
@@ -132,6 +137,7 @@ void loop() {
   second = GPS.seconds;
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
+  
   String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+timestamp+",H:"+(String)height;
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
