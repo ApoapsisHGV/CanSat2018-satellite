@@ -1,17 +1,15 @@
 #ifndef rfm_h
 #define rfm_h
 #include "Arduino.h"
-#include <RFM69.h>
+#include <RH_RF69.h>
 
 class Radio{
   public:
-    Radio(uint8_t key, int NETWORKID, int NODEID, int TONODEID);
+    Radio(uint8_t key, int CS, int INT, int RST);
     void sendData(char *payload);
     
   private:
-    RFM69 _radio;
-    int _targetid;
-    
+    RH_RF69 _radio;    
 };
 
 #endif

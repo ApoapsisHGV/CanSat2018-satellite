@@ -1,13 +1,22 @@
 #include "Arduino.h"
 #include "rfm.h"
-#include <RFM69.h>
+#include <RH_RF69.h>
 #include <SPI.h>
 
-Radio::Radio(uint8_t key, int NETWORKID, int NODEID, int TONODEID){
-  _targetid = TONODEID;
-  _radio.initialize(RF69_433MHZ, NODEID, NETWORKID);
-  _radio.setHighPower();
-  _radio.encrypt(key);
+Radio::Radio(uint8_t key, int CS, int INT, int RST){
+  RH_RF69 _radio(CS, INT);
+  
+  pinMode(RST, OUTPUT);
+  digitalWrite(RST, LOW);
+  digitalWrite(RST, HIGH);
+  delay(10);
+  digitalWrite(RST, LOW);
+  delay(10);
+  
+  _radio.init();
+  _radio.setFrequency(433.0);
+  _radio.setTxPower(20, true);
+  _radio.setEncryptionKey(key);
 }
 
 
@@ -19,6 +28,7 @@ void Radio::sendData(char *payload){
     sum += payload[c];
   }
   sprintf(payload, "%d,CHKS:%d", payload, sum);
-  _radio.send(_targetid,  payload, sizeof(payload));
+  
+  _radio.send((uint8_t *)payload, sizeof(payload));
 }
 

@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <SPI.h>
-#include <SoftwareSerial.h>
 #include <Adafruit_GPS.h>
 #include "BMP.h"
 #include "dust.h"
@@ -16,13 +15,11 @@ BMP180 bmp(GROUND);
 #define PIEZO 8
 
 //dust sensor
-const int dustMeasurePin = 0;
-const int irLedPower = 2;
-Dust dust(irLedPower, dustMeasurePin);
+Dust dust(0, 2);
 
 
 //debug printing
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
 #define VPRINT(data) Serial.print(data);
@@ -40,13 +37,10 @@ boolean usingInterrupt = true;
 //radio
 uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
                   0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
-Radio rfm69(key, 1, 1, 2);
+Radio rfm69(key, 2, 10, 9);
   
 
 void setup() {
-  if (!DEBUG) {
-    SoftwareSerial Serial(7, 6);
-  }
   Serial.begin(9600);
 
   //BMP init
