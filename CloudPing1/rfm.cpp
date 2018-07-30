@@ -5,21 +5,26 @@
 
 Radio::Radio(uint8_t key, int CS, int INT, int RST){
   RH_RF69 _radio(CS, INT);
-  
-  pinMode(RST, OUTPUT);
-  digitalWrite(RST, LOW);
-  digitalWrite(RST, HIGH);
-  delay(10);
-  digitalWrite(RST, LOW);
-  delay(10);
-  
-  _radio.init();
-  _radio.setFrequency(433.0);
-  _radio.setTxPower(20, true);
-  _radio.setEncryptionKey(key);
+  _RST = RST;
+  _key = key;
 }
 
-
+int Radio::init(){
+  pinMode(_RST, OUTPUT);
+  digitalWrite(_RST, LOW);
+  digitalWrite(_RST, HIGH);
+  delay(10);
+  digitalWrite(_RST, LOW);
+  delay(10);
+  
+  if(!_radio.init()){
+    return 1; 
+   }
+  _radio.setFrequency(433.0);
+  _radio.setTxPower(20, true);
+  _radio.setEncryptionKey(_key);
+  return 0;
+}
 
 
 void Radio::sendData(char *payload){

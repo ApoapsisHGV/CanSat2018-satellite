@@ -6,6 +6,7 @@ class Dust{
   public:
     Dust(int iled, int vout);
     double getDensity();
+    void init();
     int filter(int m);
     
   private:

@@ -5,11 +5,12 @@
 const int sdPin = 10;
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
   if(!SD.begin(sdPin)){
     Serial.println("init failed");
     while(1);  
   }
+  Serial.println("init succesfull");
 }
 
 void loop(){

@@ -19,7 +19,7 @@ Dust dust(0, 2);
 
 
 //debug printing
-#define DEBUG 0
+#define DEBUG 1
 
 #if DEBUG
 #define VPRINT(data) Serial.print(data);
@@ -33,15 +33,16 @@ Dust dust(0, 2);
 SoftwareSerial gpsSerial(4, 3);
 Adafruit_GPS GPS(&gpsSerial);
 boolean usingInterrupt = true;
-
+/*
 //radio
 uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
                   0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38};
-Radio rfm69(key, 2, 10, 9);
-  
+Radio rfm69(key, 10, 5, 9);
+*/
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.println("Start-Up");
 
   //BMP init
   VPRINTLN("REBOOT");
@@ -55,6 +56,7 @@ void setup() {
 
   //Dust init
   VPRINTLN("Startin dust sensor init");
+  dust.init();
   VPRINTLN("success");
 
   //piezo init
@@ -70,10 +72,19 @@ void setup() {
   GPS.sendCommand(PGCMD_ANTENNA);
   useInterrupt(true);
   VPRINTLN("success");
-
+  /*
+  // radio init
+  VPRINTLN("Starting radio init");
+  if(!rfm69.init()){
+    VPRINTLN("failed");
+    while(1);
+  }
+  VPRINTLN("success");
+  */
 }
 
 // taken from https://github.com/adafruit/Adafruit_GPS
+
 
 //code from adafruit for gps
 SIGNAL(TIMER0_COMPA_vect) {
@@ -101,21 +112,27 @@ void loop() {
   //parature and pressure
   double temperature, pressure, dustDensity;
   float lon, lat, velocity, newHeight ;
-  int hour, minute, second, milisecond;
+  int hour, minute, second, milisecond, maxHeight;
   
   //bmp
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
-  newHeight = bmp.getHeight(pressure);
+  height = bmp.getHeight(pressure);
   
-  if (height - newHeight > 10) {
+  
+  if (height > maxHeight) {
+    maxHeight = height;
+  }
+
+  if (height < maxHeight - 2){
     digitalWrite(PIEZO, HIGH);
   }
   
-  height = newHeight;
+  
   //dust
   dustDensity = dust.getDensity();
-  
+
+ 
   //gps
   if (GPS.newNMEAreceived()) {
     if (!GPS.parse(GPS.lastNMEA()))
@@ -131,16 +148,16 @@ void loop() {
   second = GPS.seconds;
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
-  
-  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+timestamp+",H:"+(String)height;
+
+  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp +",H:"+(String)height;
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
   
   //send to Partner
   Serial.println(payload);
-
+  /*
   //send with radio
   rfm69.sendData(payload);
-
+  */
   delay(1000);
 }

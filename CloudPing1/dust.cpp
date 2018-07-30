@@ -9,6 +9,9 @@
 Dust::Dust(int iled, int vout){
   _iled = iled;
   _vout = vout;
+}
+
+void Dust::init(){
   pinMode(_iled, OUTPUT);
   digitalWrite(_iled, LOW);
 }
