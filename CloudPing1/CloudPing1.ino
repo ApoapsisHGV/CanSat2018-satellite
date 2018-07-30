@@ -2,28 +2,9 @@
 #include <SPI.h>
 #include <Adafruit_GPS.h>
 #include "BMP.h"
-//#include "dust.h"
 #include "rfm.h"
 
-//sensor init
-//pressure and temp
-#define GROUND 500
-double height;
-BMP180 bmp(GROUND);
-
-//piezo
-#define PIEZO 8
-
-//dust sensor
-#define COV_RATIO 0.2         //ug/mmm per mv
-#define NO_DUST_VOLTAGE 400   //mv
-#define SYS_VOLTAGE 5000      //5V für Arduino nano
-const int iled = 2; //drive the led of sensor
-const int vout = 0; //analog input
-float density, voltage;
-int   adcvalue;
-
-//debug printing
+//Debug - 1 zum aktivieren, 0 zum deaktivieren
 #define DEBUG 1
 
 #if DEBUG
@@ -34,10 +15,29 @@ int   adcvalue;
 #define VPRINTLN(data)
 #endif
 
-//gps
+//Sensor initialisieren
+//Druck & Temperatur
+#define GROUND 500
+double height;
+BMP180 bmp(GROUND);
+
+//Piezo Buzzer
+#define PIEZO 8
+
+//Feinstaubsensor - Code von waveshare.com
+#define COV_RATIO 0.2         //ug/mmm per mv
+#define NO_DUST_VOLTAGE 400   //mv
+#define SYS_VOLTAGE 5000      //5V für Arduino nano
+const int iled = 2; 
+const int vout = A0; 
+float density, voltage;
+int   adcvalue;
+
+//GPS Modul
 SoftwareSerial gpsSerial(4, 3);
 Adafruit_GPS GPS(&gpsSerial);
 boolean usingInterrupt = true;
+
 /*
 //radio
 uint8_t key[] = { 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35,
@@ -46,38 +46,46 @@ Radio rfm69(key, 10, 5, 9);
 */
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println(" ");
   Serial.println("Start-Up");
+  delay(1000);
 
-  //BMP init
-  VPRINTLN("REBOOT");
-  VPRINTLN("Starting BMP180 init");
+  //BMP180
+  VPRINTLN("Initialisiere BMP180");
   if (!bmp.begin()) {
-    VPRINTLN("failed");
+    VPRINTLN("Fehlgeschlagen!");
     while (1);
   }
   bmp.calibrate();
-  VPRINTLN("success");
+  VPRINTLN("Erfolgreich");
+  delay(500);
 
-  //Dust init
-  VPRINTLN("Startin dust sensor init");
+  //Feinstaubsensor
+  VPRINTLN("Initialisiere Feinstaubsensor");
+  pinMode(vout, INPUT);
   pinMode(iled, OUTPUT);    //LED als Output
   digitalWrite(iled, LOW);  //LED standardmäßig auf 0
-  VPRINTLN("success");
+  VPRINTLN("Erfolgreich");
+  delay(500);
 
-  //piezo init
-  VPRINTLN("Starting piezo init");
+  //Piezo Buzzer
+  VPRINTLN("Initialisiere Piezo Buzzer");
   pinMode(PIEZO, OUTPUT);
-  VPRINTLN("success");
+  VPRINTLN("Erfolgreich");
+  delay(500);
 
-  //gps init
-  VPRINTLN("Starting gps init");
+  //GPS Modul
+  VPRINTLN("Initialisiere GPS Modul");
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
   useInterrupt(true);
-  VPRINTLN("success");
+  VPRINTLN("Erfolgreich");
+  delay(500);
+  
   /*
   // radio init
   VPRINTLN("Starting radio init");
@@ -87,12 +95,17 @@ void setup() {
   }
   VPRINTLN("success");
   */
+  
+  Serial.println("Starte in:");
+  Serial.println("3");
+  delay(1000);
+  Serial.println("2");
+  delay(1000);
+  Serial.println("1");
+  delay(1000);
 }
 
-// taken from https://github.com/adafruit/Adafruit_GPS
-
-
-//code from adafruit for gps
+//GPS als Timer - Code von Adafruit
 SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
 }
@@ -112,55 +125,54 @@ void useInterrupt(boolean v) {
 }
 
 uint32_t timer = millis();
-// adafruit code end
+
+
 
 void loop() {
-  //parature and pressure
+  //Variablen deklarieren
   double temperature, pressure;
   float lon, lat, velocity, newHeight ;
   int hour, minute, second, milisecond, maxHeight;
   
-  //bmp
+  //BMP180
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
   height = bmp.getHeight(pressure);
   
-  
+  //Piezo Check 1: Finde die höchste Höhe des Fluges
   if (height > maxHeight) {
     maxHeight = height;
   }
-
-  if (height < maxHeight - 2){
+  //Piezo Check 2: Wenn 300 m unter der höchsten Höhe, aktiviere Piezo Buzzer
+  if (height < maxHeight - 300){
     digitalWrite(PIEZO, HIGH);
   }
   
-  
-  //dust
+  //Feinstaubsensor
   digitalWrite(iled, HIGH);
   delayMicroseconds(280);
   adcvalue = analogRead(vout);
   digitalWrite(iled, LOW);
   adcvalue = Filter(adcvalue);
-  voltage = (SYS_VOLTAGE / 1023.0) * adcvalue * 11;  //Spannung wird umgerechnet
+  voltage = (SYS_VOLTAGE / 1023.0) * adcvalue * 11;  //Spannung wird errechnet
 
-  //Filtern
+  //Vorfiltern - Wenn die gemessene Spannung zu niedrig ist, wird davon ausgegangen, dass kein Feinstaub vorhanden ist
   if(voltage >= NO_DUST_VOLTAGE){    
     voltage -= NO_DUST_VOLTAGE;
     density = voltage * COV_RATIO;   
   }else{
-    VPRINT("Voltage too low: ");
-    VPRINTLN(voltage);
+    //VPRINT("Voltage too low: ");
+    //VPRINTLN(voltage);
     density = 0;
   }
 
-
- 
-  //gps
+  //GPS Modul
   if (GPS.newNMEAreceived()) {
     if (!GPS.parse(GPS.lastNMEA()))
       return;
   }
   
+  //Zeitstempel erstellen
   if (timer > millis())  timer = millis();
   lat = GPS.latitudeDegrees;
   lon = GPS.longitudeDegrees;
@@ -171,7 +183,8 @@ void loop() {
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
 
-  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp +",H:"+(String)height;
+  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp +",H:"+(String)height;
+  //Datenpaket wird erstellt
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
   
@@ -184,6 +197,7 @@ void loop() {
   delay(1000);
 }
 
+//Filter Funktion für Staubsensor
 int Filter(int m) {
   static int flag_first = 0, _buff[10], sum;
   const int _buff_max = 10;
