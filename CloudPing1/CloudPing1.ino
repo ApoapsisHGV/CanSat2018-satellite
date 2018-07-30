@@ -2,7 +2,7 @@
 #include <SPI.h>
 #include <Adafruit_GPS.h>
 #include "BMP.h"
-#include "dust.h"
+//#include "dust.h"
 #include "rfm.h"
 
 //sensor init
@@ -15,8 +15,13 @@ BMP180 bmp(GROUND);
 #define PIEZO 8
 
 //dust sensor
-Dust dust(0, 2);
-
+#define COV_RATIO 0.2         //ug/mmm per mv
+#define NO_DUST_VOLTAGE 400   //mv
+#define SYS_VOLTAGE 5000      //5V für Arduino nano
+const int iled = 2; //drive the led of sensor
+const int vout = 0; //analog input
+float density, voltage;
+int   adcvalue;
 
 //debug printing
 #define DEBUG 1
@@ -41,7 +46,7 @@ Radio rfm69(key, 10, 5, 9);
 */
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600);
   Serial.println("Start-Up");
 
   //BMP init
@@ -56,7 +61,8 @@ void setup() {
 
   //Dust init
   VPRINTLN("Startin dust sensor init");
-  dust.init();
+  pinMode(iled, OUTPUT);    //LED als Output
+  digitalWrite(iled, LOW);  //LED standardmäßig auf 0
   VPRINTLN("success");
 
   //piezo init
@@ -110,7 +116,7 @@ uint32_t timer = millis();
 
 void loop() {
   //parature and pressure
-  double temperature, pressure, dustDensity;
+  double temperature, pressure;
   float lon, lat, velocity, newHeight ;
   int hour, minute, second, milisecond, maxHeight;
   
@@ -130,7 +136,23 @@ void loop() {
   
   
   //dust
-  dustDensity = dust.getDensity();
+  digitalWrite(iled, HIGH);
+  delayMicroseconds(280);
+  adcvalue = analogRead(vout);
+  digitalWrite(iled, LOW);
+  adcvalue = Filter(adcvalue);
+  voltage = (SYS_VOLTAGE / 1023.0) * adcvalue * 11;  //Spannung wird umgerechnet
+
+  //Filtern
+  if(voltage >= NO_DUST_VOLTAGE){    
+    voltage -= NO_DUST_VOLTAGE;
+    density = voltage * COV_RATIO;   
+  }else{
+    VPRINT("Voltage too low: ");
+    VPRINTLN(voltage);
+    density = 0;
+  }
+
 
  
   //gps
@@ -149,7 +171,7 @@ void loop() {
   milisecond = GPS.milliseconds;
   String timestamp = (String)hour+";"+(String)minute+";"+(String)second+";"+(String)milisecond;
 
-  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)dustDensity+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp +",H:"+(String)height;
+  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp +",H:"+(String)height;
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
   
@@ -160,4 +182,30 @@ void loop() {
   rfm69.sendData(payload);
   */
   delay(1000);
+}
+
+int Filter(int m) {
+  static int flag_first = 0, _buff[10], sum;
+  const int _buff_max = 10;
+  int i;
+  
+  if(flag_first == 0) {
+    flag_first = 1;
+
+    for(i = 0, sum = 0; i < _buff_max; i++) {
+      _buff[i] = m;
+      sum += _buff[i];
+    }
+    return m;
+  }else{
+    sum -= _buff[0];
+    for(i = 0; i < (_buff_max - 1); i++) {
+      _buff[i] = _buff[i + 1];
+    }
+    _buff[9] = m;
+    sum += _buff[9];
+    
+    i = sum / 10.0;
+    return i;
+  }
 }
