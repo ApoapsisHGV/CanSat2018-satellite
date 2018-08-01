@@ -18,12 +18,12 @@ int Radio::init(){
   delay(10);
   
   if(!_radio.init()){
-    return 1; 
+    return false; 
    }
   _radio.setFrequency(433.0);
-  _radio.setTxPower(20, true);
+  _radio.setTxPower(20);
   _radio.setEncryptionKey(_key);
-  return 0;
+  return true;
 }
 
 
