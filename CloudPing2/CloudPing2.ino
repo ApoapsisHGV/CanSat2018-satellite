@@ -1,46 +1,56 @@
 #include <SD.h>
 #include <SPI.h>
+#include "configure.h"
 
-const boolean debug = false;
-const boolean deleteSD = false;
-const int sdPin = 10;
+#if DEBUG
+#define VPRINT(data) Serial.print(data);
+#define VPRINTLN(data) Serial.println(data);
+#else
+#define VPRINT(data)
+#define VPRINTLN(data)
+#endif
 
-void setup(){
-  File logfile;
+File logfile;
+char buffer[300] = "";
+int buffer_counter = 0;
+
+void setup() {
   Serial.begin(115200);
-  delay(1000);
-  if(!SD.begin(sdPin)){
-    Serial.println("Initialisierung fehlgeschlagen - SD Karte vorhanden?");
-    while(1);  
+  Serial.print("Init: SD ");
+  if (!SD.begin(SD_PIN)) {
+    Serial.println("[FAILED]");
+    while (1);
   }
-  if(SD.exists("log.txt")){
-    if(deleteSD){
-      Serial.println("log.txt wird gelöscht");
-      SD.remove("log.txt");
-    }else{
-      logfile = SD.open("log.txt", FILE_WRITE);
-      for(int i = i; i < 5; i++){
-        logfile.println(" ");
-      }
-      logfile.println("REBOOT");
-      logfile.println("Neuer Datensatz");
-      logfile.println(" ");
-    }
+  Serial.println("[OK]");
+
+  if (SD.exists("log.txt") && DELETE_OLD) {
+    Serial.print("Deleting old log...");
+    SD.remove("log.txt");
+    Serial.println("Done");
   }
-  Serial.println("Initialisierung erfolgreich");
+  logfile = SD.open("log.txt", FILE_WRITE);
+  logfile.write("\n\n\nREBOOT\n\n");
+  logfile.close();
 }
 
-void loop(){
-  File logFile;
-  if(Serial.available()){
-    String data;
-    logFile = SD.open("log.txt", FILE_WRITE);
-    data = Serial.readString();
-    if(debug){
-      Serial.println(data);
+void loop() {
+  if (Serial.available()) {
+    int data;
+    data = Serial.read();
+    if (data == "\n") {
+      logfile = SD.open("log.txt", FILE_WRITE);
+      buffer[buffer_counter] = data;
+      logfile.write(buffer);
+      logfile.close();
+      for (int c = 0; c < sizeof(buffer); c++) {
+        buffer[c] = 0;
+      }
+      buffer_counter = 0;
     }
-    logFile.println(data);
-    logFile.close();
+    else {
+      buffer[buffer_counter] = data;
+      buffer_counter++;
+    }
   }
-  delay(500);
 }
+
