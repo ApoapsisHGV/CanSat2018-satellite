@@ -28,12 +28,6 @@ int Radio::init(){
 
 
 void Radio::sendData(char *payload){
-  int sum = 0;
-  for(int c = 0; c < sizeof(payload); c++){
-    sum += payload[c];
-  }
-  sprintf(payload, "%d,CHKS:%d", payload, sum);
-  
   _radio.send((uint8_t *)payload, sizeof(payload));
 }
 

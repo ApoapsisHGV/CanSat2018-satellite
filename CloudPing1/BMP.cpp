@@ -4,9 +4,6 @@
 #include <Wire.h> 
 
 
-BMP180::BMP180(int height){
-    _height = height;
-}
 
 int BMP180::begin(){
   return _sensor.begin();  

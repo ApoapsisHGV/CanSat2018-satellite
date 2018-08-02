@@ -3,14 +3,6 @@
 
 #define VERSION "0.9"
 
-//Debug - 1 zum aktivieren, 0 zum deaktivieren
-#define DEBUG 1
-
-
-// BMP config
-// Basishöhe für den BMP
-#define BMP_GROUND 500
-
 // Piezo config
 // Piezo Pin
 #define PIEZO 8

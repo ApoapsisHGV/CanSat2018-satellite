@@ -3,23 +3,14 @@
 #include <Adafruit_GPS.h>
 #include "BMP.h"
 #include "rfm.h"
-#include "dust.h"
 #include "gps.h"
 #include "config.h"
-
-#if DEBUG
-#define VPRINT(data) Serial.print(data);
-#define VPRINTLN(data) Serial.println(data);
-#else
-#define VPRINT(data)
-#define VPRINTLN(data)
-#endif
 
 
 //Sensor initialisieren
 //Druck & Temperatur
 double height;
-BMP180 bmp(BMP_GROUND);
+BMP180 bmp;
 
 //Feinstaubsensor - Code von waveshare.com
 float density, voltage;
@@ -29,67 +20,58 @@ int   adcvalue;
 SoftwareSerial gpsSerial(4, 3);
 Adafruit_GPS GPS(&gpsSerial);
 boolean usingInterrupt = true;
+
 SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
 }
-
 
 //radio
 uint8_t key[] = { AES_KEY };
 Radio rfm69(key, RADIO_CS, RADIO_INT, RADIO_RST);
 
+void beep_long(){
+    digitalWrite(PIEZO, HIGH);
+    delay(2000);
+    digitalWrite(PIEZO, HIGH);
+}
+
 void setup() {
   Serial.begin(115200);
-  VPRINT("APOAPSIS CANSAT version: ");
-  VPRINTLN(VERSION);
-  Serial.println("Init of sensors starting...");
+  //Piezo init
+  pinMode(PIEZO, OUTPUT);
   
   //BMP180 init
-  VPRINT("Init: BMP180 ");
   if (!bmp.begin()) {
-    VPRINTLN("[FAILED]");
+    beep_long();
     while (1);
   }
   bmp.calibrate();
-  VPRINTLN("[OK]");
 
   //Feinstaubsensor init
-  VPRINT("Init: Feinstaubsensor ");
   pinMode(VOUT, INPUT);
   pinMode(ILED, OUTPUT);    //LED als Output
   digitalWrite(ILED, LOW);  //LED standardmäßig auf 0
-  VPRINTLN("[OK]");
-
-  //Piezo init
-  VPRINTLN("Init: Piezo ");
-  pinMode(PIEZO, OUTPUT);
-  VPRINTLN("[OK]");
 
   //GPS init
-  VPRINTLN("Init: GPS ");
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
   usingInterrupt = useInterrupt(true);
-  VPRINTLN("[OK]");
   
   
   // radio init
-  VPRINT("Init: Radio ");
   if(!rfm69.init()){
-    VPRINTLN("[FAILED]");
+    beep_long();
     while(1);
   }
-  VPRINTLN("[OK]");
-  
-  Serial.println("Sensor init done");
-  Serial.print("Starting loop...");
+   digitalWrite(PIEZO, HIGH);
+   delay(500);
+   digitalWrite(PIEZO, HIGH);
 }
 
 void loop() {
   //Variablen deklarieren
-  Serial.println("[OK]");
   double temperature, pressure;
   float lon, lat, velocity, newHeight ;
   int maxHeight;
@@ -114,7 +96,6 @@ void loop() {
   delayMicroseconds(280);
   adcvalue = analogRead(VOUT);
   digitalWrite(ILED, LOW);
-  adcvalue = filter(adcvalue);
   voltage = (SYS_VOLTAGE / 1023.0) * adcvalue * 11;  //Spannung wird errechnet
 
   //Vorfiltern - Wenn die gemessene Spannung zu niedrig ist, wird davon ausgegangen, dass kein Feinstaub vorhanden ist
@@ -122,8 +103,6 @@ void loop() {
     voltage -= NO_DUST_VOLTAGE;
     density = voltage * COV_RATIO;   
   }else{
-    //VPRINT("Voltage too low: ");
-    //VPRINTLN(voltage);
     density = 0;
   }
 
@@ -150,5 +129,5 @@ void loop() {
   //send with radio
   rfm69.sendData(payload);
 
-  delay(1000);
+  delay(500);
 }
