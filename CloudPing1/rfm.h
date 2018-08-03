@@ -5,14 +5,14 @@
 
 class Radio{
   public:
-    Radio(uint8_t key, int CS, int INT, int RST);
+    Radio(uint8_t *key, int CS, int INT, int RST);
     int init();
     void sendData(char *payload);
     
   private:
     RH_RF69 _radio;
     int _RST;
-    uint8_t _key;
+    uint8_t *_key;
 };
 
 #endif

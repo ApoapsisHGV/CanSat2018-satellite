@@ -3,7 +3,7 @@
 #include <RH_RF69.h>
 #include <SPI.h>
 
-Radio::Radio(uint8_t key, int CS, int INT, int RST){
+Radio::Radio(uint8_t* key, int CS, int INT, int RST){
   RH_RF69 _radio(CS, INT);
   _RST = RST;
   _key = key;
