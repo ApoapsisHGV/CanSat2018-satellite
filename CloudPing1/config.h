@@ -1,7 +1,7 @@
 #ifndef config_h
 #define config_h
 
-#define VERSION "0.9"
+#define VERSION "0.9.1"
 
 // Piezo config
 // Piezo Pin

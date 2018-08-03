@@ -8,8 +8,8 @@ class BMP180{
     public:
         void getTemperature(double &T);
         void getPressure(double &P, double &T);
-        double getHeight(double &P);
         int begin();
+        double getHeight(double &P);
         void calibrate();
     private:
         double _baselinePressure;

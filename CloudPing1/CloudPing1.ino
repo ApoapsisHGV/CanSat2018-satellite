@@ -29,10 +29,12 @@ SIGNAL(TIMER0_COMPA_vect) {
 uint8_t key[] = { AES_KEY };
 Radio rfm69(key, RADIO_CS, RADIO_INT, RADIO_RST);
 
+long datacounter = 0;
+
 void beep_long(){
     digitalWrite(PIEZO, HIGH);
     delay(2000);
-    digitalWrite(PIEZO, HIGH);
+    digitalWrite(PIEZO, LOW);
 }
 
 void setup() {
@@ -67,27 +69,24 @@ void setup() {
   }
    digitalWrite(PIEZO, HIGH);
    delay(500);
-   digitalWrite(PIEZO, HIGH);
+   digitalWrite(PIEZO, LOW);
 }
 
 void loop() {
   //Variablen deklarieren
   double temperature, pressure;
-  float lon, lat, velocity, newHeight ;
-  int maxHeight;
+  float lon, lat, velocity;
   String timestamp;
+  int maxHeight;
   
   //BMP180
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
   height = bmp.getHeight(pressure);
-  
-  //Piezo Check 1: Finde die höchste Höhe des Fluges
   if (height > maxHeight) {
     maxHeight = height;
   }
-  //Piezo Check 2: Wenn 300 m unter der höchsten Höhe, aktiviere Piezo Buzzer
-  if (height < maxHeight - 300){
+  else if (height < maxHeight - 300){
     digitalWrite(PIEZO, HIGH);
   }
   
@@ -118,7 +117,9 @@ void loop() {
   velocity = GPS.speed * 0.514444; // knots to m/s
   timestamp = (String)GPS.hour+";"+(String)GPS.minute+";"+(String)GPS.seconds+";"+(String)GPS.milliseconds;
 
-  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp +",H:"+(String)height;
+  datacounter++;
+
+  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp+",DC:"+(String)datacounter;
   //Datenpaket wird erstellt
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
