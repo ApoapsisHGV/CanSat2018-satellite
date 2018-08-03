@@ -115,7 +115,7 @@ void loop() {
   String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",DC:"+(String)datacounter;
   //Datenpaket wird erstellt
   if (GPS.newNMEAreceived()) {
-    pload += ",NE:"+GPS.read();  
+    pload += ",NE:"+GPS.lastNMEA();  
   }
   
   char payload[pload.length()];
