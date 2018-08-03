@@ -106,21 +106,18 @@ void loop() {
   }
 
   //GPS Modul
-  if (GPS.newNMEAreceived()) {
-    if (!GPS.parse(GPS.lastNMEA()))
-      return;
-  }
+
   
   //Zeitstempel erstellen
-  lat = GPS.latitudeDegrees;
-  lon = GPS.longitudeDegrees;
-  velocity = GPS.speed * 0.514444; // knots to m/s
-  timestamp = (String)GPS.hour+";"+(String)GPS.minute+";"+(String)GPS.seconds+";"+(String)GPS.milliseconds;
 
   datacounter++;
 
-  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",LA:"+(String)lat+",LO:"+(String)lon+",V:"+(String)velocity+",TI:"+ timestamp+",DC:"+(String)datacounter;
+  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",DC:"+(String)datacounter;
   //Datenpaket wird erstellt
+  if (GPS.newNMEAreceived()) {
+    pload += ",NE:"+GPS.read();  
+  }
+  
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
   
