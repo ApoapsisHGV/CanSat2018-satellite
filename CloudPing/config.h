@@ -3,6 +3,8 @@
 
 #define VERSION "0.9.1"
 
+#define DEBUG 0
+
 // Piezo config
 // Piezo Pin
 #define PIEZO 8
@@ -10,7 +12,7 @@
 // Feinstaubsensor config
 #define COV_RATIO 0.2         // Umrechnungsrate von mV zu /ug/mmm für Feinstaubsensor
 #define NO_DUST_VOLTAGE 400   // Fehlertoleranz in mV für Feinstaubsensor
-#define SYS_VOLTAGE 5000      // Spannung am Feinstaubsensor, 5V für Arduino nano
+#define SYS_VOLTAGE 5000      // Spannung am Feinstaubsensor
 #define ILED 5                // ILED Pin für den Feinstaubsensor
 #define VOUT A0               // Der analoge Messpin für den Feinstaubsensor
 
@@ -19,5 +21,9 @@
 #define RADIO_CS 10
 #define RADIO_INT 2
 #define RADIO_RST 9
+
+// SD ping
+#define DELETE_OLD 0
+#define SD_PIN 10
 
 #endif
