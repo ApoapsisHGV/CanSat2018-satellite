@@ -1,12 +1,14 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <Adafruit_GPS.h>
 #include "BMP.h"
 #include "rfm.h"
 #include "gps.h"
+#include "ds.h"
 #include "config.h"
-
 
 File logfile;
 
@@ -18,7 +20,7 @@ File logfile;
 #define VPRINTLN(data)
 #endif
 
-//Sensor initialisieren
+//Sensoren initialisieren
 //Druck & Temperatur
 double height;
 BMP180 bmp;
@@ -28,7 +30,7 @@ float density, voltage;
 int   adcvalue;
 
 //GPS Modul
-SoftwareSerial gpsSerial(4, 3);
+SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
 Adafruit_GPS GPS(&gpsSerial);
 boolean usingInterrupt = true;
 
@@ -36,19 +38,22 @@ SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
 }
 
-//radio
+// radio
 uint8_t key[] = { AES_KEY };
 Radio rfm69(key, RADIO_CS, RADIO_INT, RADIO_RST);
 
+// internal temperature
+DsSensor internalTemperatureSensor;
+
 long datacounter = 0;
 
-void beep_long(){
+void beep_long() {
   digitalWrite(PIEZO, HIGH);
   delay(2000);
   digitalWrite(PIEZO, LOW);
 }
 
-void beep_short(){
+void beep_short() {
   digitalWrite(PIEZO, HIGH);
   delay(500);
   digitalWrite(PIEZO, LOW);
@@ -60,7 +65,7 @@ void setup() {
   Serial.print("CLOUDPING VERSION: ");
   Serial.println(VERSION);
   Serial.println("Init starting");
-  
+
   //Piezo init
   Serial.print("Initializing piezo ");
   pinMode(PIEZO, OUTPUT);
@@ -85,7 +90,7 @@ void setup() {
   }
 
   logfile = SD.open("log.txt", FILE_WRITE);
-  
+
   //BMP180 init
   VPRINT("Initializing BMP180 ");
   if (!bmp.begin()) {
@@ -105,7 +110,25 @@ void setup() {
   digitalWrite(ILED, LOW);  //LED standardmäßig auf 0
   VPRINTLN("[OK]");
 
-  VPRINTLN("Initializing GPS ");
+  // radio init
+  VPRINT("Initializing RFM69 ");
+  if (!rfm69.init()) {
+    VPRINTLN("[FAILED]");
+    beep_long();
+    delay(1000);
+    beep_long();
+    delay(1000);
+    beep_long();
+    while (1);
+  }
+  VPRINTLN("[OK]");
+
+  // internal ds
+  VPRINT("Initializing Internal DS ");
+  internalTemperatureSensor.begin();
+  VPRINTLN("[OK]");
+
+  VPRINT("Initializing GPS ");
   //GPS init
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
@@ -113,19 +136,29 @@ void setup() {
   GPS.sendCommand(PGCMD_ANTENNA);
   usingInterrupt = useInterrupt(true);
   VPRINTLN("[OK]");
+  VPRINTLN("GPS fix attempt 1");
   
-  // radio init
-  VPRINT("Initializing RFM69 ");
-  if(!rfm69.init()){
-    VPRINTLN("[FAILED]");
-    beep_long();
-    delay(1000);
-    beep_long();
-    delay(1000);
-    beep_long();
-    while(1);
+  boolean fix = false;
+  pinMode(GPS_FIX, INPUT);
+  long timeSinceStart = 0;
+  
+  while(!fix){
+    delay(10);
+    timeSinceStart += 10;
+    int attempt = timeSinceStart/10 + 1;
+    VPRINTLN("Attempt: "+(String)attempt);
+    fix = digitalRead(GPS_FIX);
+    if(timeSinceStart > 75000){
+      break;
+    }
   }
-  VPRINTLN("[OK]");
+  if(fix){
+    VPRINTLN("Success");
+  }
+  else{
+    VPRINTLN("TIMEOUT");
+  }
+  
   beep_short();
   logfile.close();
 }
@@ -136,7 +169,7 @@ void loop() {
   float lon, lat, velocity;
   String timestamp;
   int maxHeight;
-  
+
   //BMP180
   bmp.getTemperature(temperature);
   bmp.getPressure(pressure, temperature);
@@ -144,10 +177,10 @@ void loop() {
   if (height > maxHeight) {
     maxHeight = height;
   }
-  else if (height < maxHeight - 300){
+  else if (height < maxHeight - 300) {
     digitalWrite(PIEZO, HIGH);
   }
-  
+
   //Feinstaubsensor
   digitalWrite(ILED, HIGH);
   delayMicroseconds(280);
@@ -156,21 +189,21 @@ void loop() {
   voltage = (SYS_VOLTAGE / 1023.0) * adcvalue * 11;  //Spannung wird errechnet
 
   //Vorfiltern - Wenn die gemessene Spannung zu niedrig ist, wird davon ausgegangen, dass kein Feinstaub vorhanden ist
-  if(voltage >= NO_DUST_VOLTAGE){    
+  if (voltage >= NO_DUST_VOLTAGE) {
     voltage -= NO_DUST_VOLTAGE;
-    density = voltage * COV_RATIO;   
-  }else{
+    density = voltage * COV_RATIO;
+  } else {
     density = 0;
   }
 
   datacounter++;
 
-  String pload = "T:"+(String)temperature+",P:"+(String)pressure+",D:"+(String)density+",Vo:"+(String)voltage+",DC:"+(String)datacounter;
+  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter+",IT:"+(String)internalTemperatureSensor.getTemperature();
   //Datenpaket wird erstellt
   if (GPS.newNMEAreceived()) {
-    pload += ",NE:"+String(GPS.lastNMEA());  
+    pload += ",NE:" + String(GPS.lastNMEA());
   }
-  
+
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
 
@@ -178,7 +211,7 @@ void loop() {
   //send to Partner
   logfile.println(payload);
   logfile.close();
-  
+
   //send with radio
   rfm69.sendData(payload);
 
