@@ -30,8 +30,8 @@
 #define DS_WIRE_BUS 33
 
 // GPS pins
-#define GPS_RX A12 // currently not supported has to be changed later
-#define GPS_TX A14
+#define GPS_RX A14
+#define GPS_TX A15
 #define GPS_FIX 44
 
 
