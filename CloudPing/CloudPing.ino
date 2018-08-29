@@ -166,9 +166,8 @@ void setup() {
 void loop() {
   //Variablen deklarieren
   double temperature, pressure;
-  float lon, lat, velocity;
   String timestamp;
-  int maxHeight;
+  int maxHeight = 0;
 
   //BMP180
   bmp.getTemperature(temperature);
