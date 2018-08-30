@@ -62,31 +62,31 @@ void beep_short() {
 void setup() {
   Serial.begin(115200);
 
-  Serial.print("CLOUDPING VERSION: ");
-  Serial.println(VERSION);
-  Serial.println("Init starting");
+  VPRINT("CLOUDPING VERSION: ");
+  VPRINTLN(VERSION);
+  VPRINTLN("Init starting");
 
   //Piezo init
-  Serial.print("Initializing piezo ");
+  VPRINT("Initializing piezo ");
   pinMode(PIEZO, OUTPUT);
-  Serial.print("[OK]\nRunning piezo self test ");
+  VPRINT("[OK]\nRunning piezo self test ");
   beep_short();
   delay(1000);
-  Serial.println("[OK]");
+  VPRINTLN("[OK]");
 
   // SD init
-  Serial.print("Init: SD ");
+  VPRINT("Init: SD ");
   if (!SD.begin(SD_PIN)) {
-    Serial.println("[FAILED]");
+    VPRINTLN("[FAILED]");
     beep_long();
     while (1);
   }
-  Serial.println("[OK]");
+  VPRINTLN("[OK]");
 
   if (SD.exists("log.txt") && DELETE_OLD) {
-    Serial.print("Deleting old log...");
+    VPRINT("Deleting old log...");
     SD.remove("log.txt");
-    Serial.println("Done");
+    VPRINTLN("Done");
   }
 
   logfile = SD.open("log.txt", FILE_WRITE);

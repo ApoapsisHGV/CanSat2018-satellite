@@ -29,5 +29,6 @@ int Radio::init(){
 
 void Radio::sendData(char *payload){
   _radio.send((uint8_t *)payload, sizeof(payload));
+  _radio.waitPacketSent();
 }
 
