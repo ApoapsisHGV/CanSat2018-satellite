@@ -26,7 +26,7 @@
 #define DELETE_OLD 0
 #define SD_PIN 6
 
-// internal ds pin
+// ds pin
 #define DS_WIRE_BUS 33
 
 // GPS pins

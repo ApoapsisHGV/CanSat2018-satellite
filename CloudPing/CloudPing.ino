@@ -7,7 +7,6 @@
 #include "BMP.h"
 #include "rfm.h"
 #include "gps.h"
-#include "ds.h"
 #include "config.h"
 
 File logfile;
@@ -43,7 +42,8 @@ uint8_t key[] = { AES_KEY };
 Radio rfm69(key, RADIO_CS, RADIO_INT, RADIO_RST);
 
 // internal temperature
-DsSensor internalTemperatureSensor;
+OneWire oneWire(DS_WIRE_BUS); 
+DallasTemperature ds_sensor(&oneWire);
 
 long datacounter = 0;
 
@@ -125,7 +125,7 @@ void setup() {
 
   // internal ds
   VPRINT("Initializing Internal DS ");
-  internalTemperatureSensor.begin();
+  ds_sensor.begin();
   VPRINTLN("[OK]");
 
   VPRINT("Initializing GPS ");
@@ -196,8 +196,9 @@ void loop() {
   }
 
   datacounter++;
-
-  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter+",IT:"+(String)internalTemperatureSensor.getTemperature();
+  ds_sensor.requestTemperatures();
+  
+  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter+",IT:"+(String)ds_sensor.getTempCByIndex(0);
   //Datenpaket wird erstellt
   if (GPS.newNMEAreceived()) {
     pload += ",NE:" + String(GPS.lastNMEA());
