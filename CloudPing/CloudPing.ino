@@ -42,7 +42,7 @@ uint8_t key[] = { AES_KEY };
 Radio rfm69(key, RADIO_CS, RADIO_INT, RADIO_RST);
 
 // internal temperature
-OneWire oneWire(DS_WIRE_BUS); 
+OneWire oneWire(DS_WIRE_BUS);
 DallasTemperature ds_sensor(&oneWire);
 
 long datacounter = 0;
@@ -137,28 +137,28 @@ void setup() {
   usingInterrupt = useInterrupt(true);
   VPRINTLN("[OK]");
   VPRINTLN("GPS fix attempt 1");
-  
+
   boolean fix = false;
   pinMode(GPS_FIX, INPUT);
   long timeSinceStart = 0;
-  
-  while(!fix){
+
+  while (!fix) {
     delay(10);
     timeSinceStart += 10;
-    int attempt = timeSinceStart/10 + 1;
-    VPRINTLN("Attempt: "+(String)attempt);
+    int attempt = timeSinceStart / 10 + 1;
+    VPRINTLN("Attempt: " + (String)attempt);
     fix = digitalRead(GPS_FIX);
-    if(timeSinceStart > 75000){
+    if (timeSinceStart > 75000) {
       break;
     }
   }
-  if(fix){
+  if (fix) {
     VPRINTLN("Success");
   }
-  else{
+  else {
     VPRINTLN("TIMEOUT");
   }
-  
+
   beep_short();
   logfile.close();
 }
@@ -197,8 +197,8 @@ void loop() {
 
   datacounter++;
   ds_sensor.requestTemperatures();
-  
-  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter+",IT:"+(String)ds_sensor.getTempCByIndex(0);
+
+  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter + ",IT:" + (String)ds_sensor.getTempCByIndex(0);
   //Datenpaket wird erstellt
   if (GPS.newNMEAreceived()) {
     pload += ",NE:" + String(GPS.lastNMEA());
