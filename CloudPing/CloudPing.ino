@@ -3,17 +3,17 @@
 #include <SD.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <RH_RF69.h>
 #include <Adafruit_GPS.h>
 #include "BMP.h"
-#include "rfm.h"
 #include "gps.h"
 #include "config.h"
 
 File logfile;
 
 #if DEBUG
-#define VPRINT(data) Serial.print(data); logfile.print(data);
-#define VPRINTLN(data) Serial.println(data); logfile.println(data);
+#define VPRINT(data) Serial.print(data);// logfile.print(data);
+#define VPRINTLN(data) Serial.println(data);// logfile.println(data);
 #else
 #define VPRINT(data)
 #define VPRINTLN(data)
@@ -39,7 +39,7 @@ SIGNAL(TIMER0_COMPA_vect) {
 
 // radio
 uint8_t key[] = { AES_KEY };
-Radio rfm69(key, RADIO_CS, RADIO_INT, RADIO_RST);
+RH_RF69 rfm69(RADIO_CS, RADIO_INT);
 
 // internal temperature
 OneWire oneWire(DS_WIRE_BUS);
@@ -73,6 +73,7 @@ void setup() {
   beep_short();
   delay(1000);
   VPRINTLN("[OK]");
+  pinMode(SDS, INPUT);
 
   // SD init
   VPRINT("Init: SD ");
@@ -121,6 +122,10 @@ void setup() {
     beep_long();
     while (1);
   }
+  rfm69.setFrequency(433.0);
+  rfm69.setTxPower(20);
+  rfm69.setEncryptionKey(key);
+  rfm69.setModemConfig(RH_RF69::GFSK_Rb250Fd250);
   VPRINTLN("[OK]");
 
   // internal ds
@@ -139,7 +144,6 @@ void setup() {
   VPRINTLN("GPS fix attempt 1");
 
   boolean fix = false;
-  pinMode(GPS_FIX, INPUT);
   long timeSinceStart = 0;
 
   while (!fix) {
@@ -147,8 +151,11 @@ void setup() {
     timeSinceStart += 10;
     int attempt = timeSinceStart / 10 + 1;
     VPRINTLN("Attempt: " + (String)attempt);
-    fix = digitalRead(GPS_FIX);
-    if (timeSinceStart > 75000) {
+    if (GPS.newNMEAreceived()) {
+       GPS.parse(GPS.lastNMEA());
+    }
+    fix = GPS.fix;
+    if (timeSinceStart > GPS_TIMEOUT) {
       break;
     }
   }
@@ -157,13 +164,24 @@ void setup() {
   }
   else {
     VPRINTLN("TIMEOUT");
+    beep_long();
+    delay(1000);
+    beep_long();
+    delay(1000);
+    beep_long();
+    delay(1000);
+    beep_long();
   }
 
   beep_short();
-  logfile.close();
+  // logfile.close();
 }
 
 void loop() {
+  while(!digitalRead(SDS)){
+    VPRINTLN("SDS not active");
+    delay(1000);
+  }
   //Variablen deklarieren
   double temperature, pressure;
   String timestamp;
@@ -200,20 +218,34 @@ void loop() {
 
   String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter + ",IT:" + (String)ds_sensor.getTempCByIndex(0);
   //Datenpaket wird erstellt
-  if (GPS.newNMEAreceived()) {
-    pload += ",NE:" + String(GPS.lastNMEA());
-  }
-
+  VPRINTLN("done");
+  VPRINTLN(pload);
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
 
-  logfile = SD.open("log.txt", FILE_WRITE);
-  //send to Partner
+  //logfile = SD.open("log.txt", FILE_WRITE);
   logfile.println(payload);
-  logfile.close();
+  //logfile.close();
+  
+  rfm69.send((uint8_t *)payload, sizeof(payload));
+  VPRINTLN("SENT!!!!");
 
-  //send with radio
-  rfm69.sendData(payload);
+  String pload_gps = "GPS";
+  if (GPS.newNMEAreceived()) {
+    VPRINTLN("got nema parsing");
+    GPS.parse(GPS.lastNMEA());
+    VPRINTLN("parsed");
+    pload_gps += "LONG:"+(String)GPS.longitude+",";
+    pload_gps += "LAT:" +(String)GPS.longitude+",";
+    pload_gps += "SPE:" +(String)GPS.speed+",";
+    pload_gps += "ALT:" +(String)GPS.altitude+",";
+    pload_gps += "TIM:" +(String)GPS.hour +";"+ (String)GPS.minute +";"+(String)GPS.seconds+",";
+  }
+  char payload_gps[pload_gps.length()];
+  pload_gps.toCharArray(payload_gps, pload_gps.length());
 
+  VPRINTLN(pload_gps);
+  rfm69.send((uint8_t *)payload_gps, sizeof(payload_gps));
+  VPRINTLN("SENT!!!!!");
   delay(500);
 }

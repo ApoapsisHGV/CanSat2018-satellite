@@ -1,7 +1,7 @@
 #ifndef config_h
 #define config_h
 
-#define VERSION "0.9.1"
+#define VERSION "0.9.9"
 
 #define DEBUG 1
 
@@ -20,10 +20,9 @@
 #define AES_KEY 0x41, 0x70, 0x30, 0x61, 0x70, 0x35, 0x31, 0x35, 0x48, 0x47, 0x56, 0x2d, 0x32, 0x30, 0x31, 0x38
 #define RADIO_CS 4
 #define RADIO_INT 2
-#define RADIO_RST 3
 
 // SD pin
-#define DELETE_OLD 0
+#define DELETE_OLD 1
 #define SD_PIN 6
 
 // ds pin
@@ -32,7 +31,9 @@
 // GPS pins
 #define GPS_RX A14
 #define GPS_TX A15
-#define GPS_FIX 44
+#define GPS_TIMEOUT 60000
 
+// SDS
+#define SDS 15
 
 #endif
