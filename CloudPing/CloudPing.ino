@@ -12,8 +12,8 @@
 File logfile;
 
 #if DEBUG
-#define VPRINT(data) Serial.print(data);// logfile.print(data);
-#define VPRINTLN(data) Serial.println(data);// logfile.println(data);
+#define VPRINT(data) Serial.print(data); logfile.print(data);
+#define VPRINTLN(data) Serial.println(data); logfile.println(data);
 #else
 #define VPRINT(data)
 #define VPRINTLN(data)
