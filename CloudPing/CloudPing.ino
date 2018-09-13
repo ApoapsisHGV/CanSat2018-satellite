@@ -174,7 +174,7 @@ void setup() {
   }
 
   beep_short();
-  // logfile.close();
+  logfile.close();
 }
 
 void loop() {
@@ -186,6 +186,8 @@ void loop() {
   double temperature, pressure;
   String timestamp;
   int maxHeight = 0;
+
+  logfile = SD.open("log.txt", FILE_WRITE);
 
   //BMP180
   bmp.getTemperature(temperature);
@@ -246,6 +248,7 @@ void loop() {
 
   VPRINTLN(pload_gps);
   rfm69.send((uint8_t *)payload_gps, sizeof(payload_gps));
-  VPRINTLN("SENT!!!!!");
+  VPRINTLN("SENT");
+  logfile.close();
   delay(500);
 }
