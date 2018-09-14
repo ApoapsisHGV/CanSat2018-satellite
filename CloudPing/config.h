@@ -31,7 +31,7 @@
 // GPS pins
 #define GPS_RX A14
 #define GPS_TX A15
-#define GPS_TIMEOUT 60000
+#define GPS_TIMEOUT 10000
 
 // SDS
 #define SDS 15

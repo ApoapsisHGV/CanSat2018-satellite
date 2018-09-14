@@ -9,11 +9,13 @@
 #include "gps.h"
 #include "config.h"
 
-File logfile;
+ File logfile;
+ File gpsfile;
+ File initfile;
 
 #if DEBUG
-#define VPRINT(data) Serial.print(data); logfile.print(data);
-#define VPRINTLN(data) Serial.println(data); logfile.println(data);
+#define VPRINT(data) Serial.print(data); initfile.print(data);
+#define VPRINTLN(data) Serial.println(data); initfile.println(data);
 #else
 #define VPRINT(data)
 #define VPRINTLN(data)
@@ -60,6 +62,7 @@ void beep_short() {
 }
 
 void setup() {
+  
   Serial.begin(115200);
 
   VPRINT("CLOUDPING VERSION: ");
@@ -70,7 +73,7 @@ void setup() {
   VPRINT("Initializing piezo ");
   pinMode(PIEZO, OUTPUT);
   VPRINT("[OK]\nRunning piezo self test ");
-  beep_short();
+  // beep_short();
   delay(1000);
   VPRINTLN("[OK]");
   pinMode(SDS, INPUT);
@@ -90,7 +93,13 @@ void setup() {
     VPRINTLN("Done");
   }
 
-  logfile = SD.open("log.txt", FILE_WRITE);
+  if (SD.exists("init.txt") && DELETE_OLD) {
+    VPRINT("Deleting old log...");
+    SD.remove("init.txt");
+    VPRINTLN("Done");
+  }
+
+  initfile = SD.open("setup.txt", FILE_WRITE);
 
   //BMP180 init
   VPRINT("Initializing BMP180 ");
@@ -161,8 +170,7 @@ void setup() {
   }
   if (fix) {
     VPRINTLN("Success");
-  }
-  else {
+  } else {
     VPRINTLN("TIMEOUT");
     beep_long();
     delay(1000);
@@ -170,24 +178,27 @@ void setup() {
     delay(1000);
     beep_long();
     delay(1000);
-    beep_long();
+    beep_long(); 
   }
-
+  
+  delay(500);
   beep_short();
-  logfile.close();
+  
+  initfile.close();
 }
 
 void loop() {
+  
   while(!digitalRead(SDS)){
     VPRINTLN("SDS not active");
     delay(1000);
   }
+  
   //Variablen deklarieren
   double temperature, pressure;
   String timestamp;
   int maxHeight = 0;
-
-  logfile = SD.open("log.txt", FILE_WRITE);
+  
 
   //BMP180
   bmp.getTemperature(temperature);
@@ -195,8 +206,7 @@ void loop() {
   height = bmp.getHeight(pressure);
   if (height > maxHeight) {
     maxHeight = height;
-  }
-  else if (height < maxHeight - 300) {
+  } else if (height < maxHeight - 700) {
     digitalWrite(PIEZO, HIGH);
   }
 
@@ -218,21 +228,20 @@ void loop() {
   datacounter++;
   ds_sensor.requestTemperatures();
 
-  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter + ",IT:" + (String)ds_sensor.getTempCByIndex(0);
   //Datenpaket wird erstellt
-  VPRINTLN("done");
+  String pload = "T:" + (String)temperature + ",P:" + (String)pressure + ",D:" + (String)density + ",Vo:" + (String)voltage + ",DC:" + (String)datacounter + ",IT:" + (String)ds_sensor.getTempCByIndex(0);
   VPRINTLN(pload);
   char payload[pload.length()];
   pload.toCharArray(payload, pload.length());
 
-  //logfile = SD.open("log.txt", FILE_WRITE);
-  logfile.println(payload);
-  //logfile.close();
+  logfile = SD.open("log.txt", FILE_WRITE);
+  logfile.println(pload);
+  logfile.close();
   
   rfm69.send((uint8_t *)payload, sizeof(payload));
-  VPRINTLN("SENT!!!!");
-
-  String pload_gps = "GPS";
+  
+  String pload_gps = "GPS,";
+  
   if (GPS.newNMEAreceived()) {
     VPRINTLN("got nema parsing");
     GPS.parse(GPS.lastNMEA());
@@ -243,12 +252,20 @@ void loop() {
     pload_gps += "ALT:" +(String)GPS.altitude+",";
     pload_gps += "TIM:" +(String)GPS.hour +";"+ (String)GPS.minute +";"+(String)GPS.seconds+",";
   }
+  pload_gps += "DC:" +(String)datacounter+",";
+  
   char payload_gps[pload_gps.length()];
   pload_gps.toCharArray(payload_gps, pload_gps.length());
 
+  delay(200);
+
+  gpsfile = SD.open("gps.txt", FILE_WRITE);
+  gpsfile.println(pload_gps);
+  gpsfile.close();
+  
   VPRINTLN(pload_gps);
+  
   rfm69.send((uint8_t *)payload_gps, sizeof(payload_gps));
-  VPRINTLN("SENT");
-  logfile.close();
-  delay(500);
+  
+  delay(200);
 }
